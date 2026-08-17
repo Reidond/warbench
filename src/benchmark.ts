@@ -239,10 +239,7 @@ export const runCodexSeed = (
           resolvedModel = candidate.success.model;
         } else {
           const failure = candidate.failure;
-          if (
-            failure instanceof CodexControllerError &&
-            failure.reason !== "invalid_decision"
-          ) {
+          if (failure instanceof CodexControllerError && failure.reason !== "invalid_decision") {
             return yield* Effect.fail(failure);
           }
           invalidDecisions += 1;
