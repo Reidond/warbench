@@ -1,10 +1,10 @@
-name: Format Dump
+name: Format Repair
 
 on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -12,25 +12,23 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          persist-credentials: false
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
       - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb
         with:
           node-version: "22.19.0"
           cache: true
           run-install: false
       - run: vp install --frozen-lockfile
-      - name: Emit canonical source
+      - name: Canonicalize source
         run: |
           vp check --fix
-          for file in \
-            src/benchmark.test.ts \
-            src/benchmark.ts \
-            src/codex-controller.test.ts \
-            src/codex-controller.ts \
-            src/index.ts \
-            src/pdf-report.ts; do
-            echo "WAR_BENCH_FILE_BEGIN:$file"
-            base64 -w0 "$file"
-            echo
-            echo "WAR_BENCH_FILE_END:$file"
-          done
+          if git diff --quiet; then
+            echo "Source is already canonical."
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/benchmark.test.ts src/benchmark.ts src/codex-controller.test.ts src/codex-controller.ts src/index.ts src/pdf-report.ts
+          git commit -m "style: apply canonical Vite+ formatting"
+          git push origin HEAD:${{ github.head_ref }}
