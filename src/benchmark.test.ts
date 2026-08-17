@@ -29,8 +29,7 @@ const rows = (
       invalidDecisions,
       requestFailures,
       decisionCount: 8,
-      decisionLatenciesMs:
-        controller === "codex" && requestFailures < 8 ? [latencyMs] : [],
+      decisionLatenciesMs: controller === "codex" && requestFailures < 8 ? [latencyMs] : [],
       failureMessages: requestFailures > 0 ? ["request: test provider failure"] : [],
     })),
   );

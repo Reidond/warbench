@@ -66,7 +66,9 @@ const reportLines = (result: HypothesisResult): string[] => {
   } else if (result.status === "INCONCLUSIVE") {
     lines.push("Complete the minimum required sample before interpreting the hypothesis.");
   } else {
-    lines.push("This conclusion was computed mechanically from valid live-model evidence and the acceptance gates above.");
+    lines.push(
+      "This conclusion was computed mechanically from valid live-model evidence and the acceptance gates above.",
+    );
   }
   return lines;
 };

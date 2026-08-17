@@ -86,7 +86,8 @@ export const createPiAccountCarrierToken = (accountId: string): string => {
   return `${header}.${payload}.warbench`;
 };
 
-export const createCodexAuthenticatedFetch = (credentials: CodexCredentials): typeof fetch =>
+export const createCodexAuthenticatedFetch =
+  (credentials: CodexCredentials): typeof fetch =>
   async (input, init) => {
     const headers = new Headers(init?.headers);
     headers.set("authorization", `Bearer ${credentials.access}`);

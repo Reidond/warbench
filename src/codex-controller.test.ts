@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  createCodexAuthenticatedFetch,
-  createPiAccountCarrierToken,
-} from "./codex-controller";
+import { createCodexAuthenticatedFetch, createPiAccountCarrierToken } from "./codex-controller";
 
 const credentials = {
   access: "real-oauth-access-token",

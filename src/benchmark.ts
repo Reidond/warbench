@@ -106,10 +106,7 @@ export const summarize = (
 ): BenchmarkSummary => {
   const latencies = results.flatMap((result) => result.decisionLatenciesMs);
   const decisions = results.reduce((sum, result) => sum + result.decisionCount, 0);
-  const requestFailures = results.reduce(
-    (sum, result) => sum + requestFailuresFor(result),
-    0,
-  );
+  const requestFailures = results.reduce((sum, result) => sum + requestFailuresFor(result), 0);
   const modelResponses = results.reduce((sum, result) => sum + modelResponsesFor(result), 0);
   const invalid = results.reduce((sum, result) => sum + result.invalidDecisions, 0);
   const failureMessages = [
@@ -129,10 +126,7 @@ export const summarize = (
               ? 0
               : familyResults.filter((result) => result.won).length / familyResults.length,
           runs: familyResults.length,
-          modelResponses: familyResults.reduce(
-            (sum, result) => sum + modelResponsesFor(result),
-            0,
-          ),
+          modelResponses: familyResults.reduce((sum, result) => sum + modelResponsesFor(result), 0),
           requestFailures: familyResults.reduce(
             (sum, result) => sum + requestFailuresFor(result),
             0,
@@ -152,9 +146,8 @@ export const summarize = (
     requestFailureRate: decisions === 0 ? 0 : requestFailures / decisions,
     modelResponseCount: modelResponses,
     p95DecisionLatencyMs: percentile95(latencies),
-    legacyRuns: results.filter(
-      (result) => result.schemaVersion !== currentEvidenceSchemaVersion,
-    ).length,
+    legacyRuns: results.filter((result) => result.schemaVersion !== currentEvidenceSchemaVersion)
+      .length,
     failureMessages,
     families,
   };

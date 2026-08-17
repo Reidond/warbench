@@ -68,7 +68,9 @@ const freshCredentials = async (env: AppEnv): Promise<CodexCredentials> => {
   const current = await authVault.getCredentials();
   if (!current) throw new Error("Codex is not connected");
   if (!current.accountId) {
-    throw new Error("Stored Codex authorization has no ChatGPT account id; disconnect and reconnect");
+    throw new Error(
+      "Stored Codex authorization has no ChatGPT account id; disconnect and reconnect",
+    );
   }
   if (current.expires > Date.now() + 60_000) return current;
   const refreshed: CodexCredentials = await Effect.runPromise(
