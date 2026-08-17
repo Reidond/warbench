@@ -85,9 +85,8 @@ export const makePiAccountToken = (accountId: string): string => {
   return `e30.${payload}.e30`;
 };
 
-export const makeCodexFetch = (
-  credentials: CodexCredentials & { readonly accountId: string },
-): typeof globalThis.fetch =>
+export const makeCodexFetch =
+  (credentials: CodexCredentials & { readonly accountId: string }): typeof globalThis.fetch =>
   async (input, init) => {
     const headers = new Headers(init?.headers);
     headers.set("Authorization", `Bearer ${credentials.access}`);
