@@ -8,6 +8,8 @@ import type { Controller } from "./sim";
 export class CodexControllerError extends Data.TaggedError("CodexControllerError")<{
   readonly reason: "model" | "request" | "invalid_decision";
   readonly message: string;
+  readonly latencyMs?: number;
+  readonly model?: string;
 }> {}
 
 export interface CodexDecisionResult {
@@ -66,6 +68,35 @@ const validateSemantics = (
   return decision;
 };
 
+/**
+ * Pi currently extracts chatgpt_account_id by applying atob() directly to the
+ * access-token JWT payload. Cloudflare Workers correctly treats JWT payloads as
+ * base64url, so a valid OAuth token can fail Pi's synchronous decoder before a
+ * network request is made. This unsigned carrier is used only for Pi's local
+ * account-id extraction. The fetch wrapper below always replaces it with the
+ * real OAuth access token before the request leaves the Worker.
+ */
+export const createPiAccountCarrierToken = (accountId: string): string => {
+  const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
+  const payload = btoa(
+    JSON.stringify({
+      "https://api.openai.com/auth": { chatgpt_account_id: accountId },
+    }),
+  );
+  return `${header}.${payload}.warbench`;
+};
+
+export const createCodexAuthenticatedFetch = (credentials: CodexCredentials): typeof fetch =>
+  async (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.set("authorization", `Bearer ${credentials.access}`);
+    if (credentials.accountId) headers.set("chatgpt-account-id", credentials.accountId);
+    return fetch(input, { ...init, headers });
+  };
+
+const safeFailureMessage = (message: string): string =>
+  message.replace(/Bearer\s+[^\s,;]+/gi, "Bearer [redacted]").slice(0, 500);
+
 export const decideWithCodex = (
   observation: Observation,
   side: Side,
@@ -74,6 +105,13 @@ export const decideWithCodex = (
 ): Effect.Effect<CodexDecisionResult, CodexControllerError> =>
   Effect.tryPromise({
     try: async () => {
+      if (!credentials.accountId) {
+        throw new CodexControllerError({
+          reason: "request",
+          message: "Codex OAuth credential has no ChatGPT account id; disconnect and reconnect",
+        });
+      }
+
       const provider = openaiCodexProvider();
       const models = provider.getModels();
       const model = requestedModel
@@ -102,7 +140,8 @@ export const decideWithCodex = (
 
       const started = performance.now();
       const stream = provider.streamSimple(model, context, {
-        apiKey: credentials.access,
+        apiKey: createPiAccountCarrierToken(credentials.accountId),
+        fetch: createCodexAuthenticatedFetch(credentials),
         reasoning: "low",
         transport: "sse",
         timeoutMs: 5_000,
@@ -113,7 +152,9 @@ export const decideWithCodex = (
         if (event.type === "error") {
           throw new CodexControllerError({
             reason: "request",
-            message: event.error.errorMessage ?? "Codex request failed",
+            message: safeFailureMessage(event.error.errorMessage ?? "Codex request failed"),
+            latencyMs: performance.now() - started,
+            model: model.id,
           });
         }
       }
@@ -126,6 +167,8 @@ export const decideWithCodex = (
         throw new CodexControllerError({
           reason: "invalid_decision",
           message: "Codex response was not strict JSON",
+          latencyMs,
+          model: model.id,
         });
       }
 
@@ -140,7 +183,11 @@ export const decideWithCodex = (
         if (cause instanceof CodexControllerError) throw cause;
         throw new CodexControllerError({
           reason: "invalid_decision",
-          message: cause instanceof Error ? cause.message : "Codex decision failed validation",
+          message: safeFailureMessage(
+            cause instanceof Error ? cause.message : "Codex decision failed validation",
+          ),
+          latencyMs,
+          model: model.id,
         });
       }
     },
@@ -149,7 +196,7 @@ export const decideWithCodex = (
         ? cause
         : new CodexControllerError({
             reason: "request",
-            message: cause instanceof Error ? cause.message : String(cause),
+            message: safeFailureMessage(cause instanceof Error ? cause.message : String(cause)),
           }),
   });
 
