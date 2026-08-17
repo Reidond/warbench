@@ -1,0 +1,27 @@
+name: Format diff
+
+on:
+  push:
+    branches: [fix/codex-provider-runtime]
+
+permissions:
+  contents: read
+
+jobs:
+  format-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb
+        with:
+          node-version: "22.19.0"
+          cache: true
+          run-install: false
+      - run: vp install --frozen-lockfile
+      - name: Print canonical formatting
+        run: |
+          vp check --fix
+          git diff -- src/benchmark.ts src/codex-controller.ts src/codex-controller.test.ts
+          test -z "$(git status --porcelain)"
